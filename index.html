@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Core Project</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background: #050811; font-family: sans-serif; }
+        canvas { display: block; width: 100%; height: 100%; }
+        .overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ffffff;
+            text-align: center;
+            pointer-events: none;
+            mix-blend-mode: lightening;
+        }
+        .main-num {
+            font-size: 7rem;
+            font-weight: 800;
+            color: #AEC6CF; /* آبی پاستیلی */
+            text-shadow: 0 0 30px rgba(174, 198, 207, 0.6);
+            opacity: 0.15;
+            letter-spacing: 10px;
+            animation: pulse 4s infinite ease-in-out;
+        }
+        .hint-text {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.9rem;
+            margin-top: 20px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.15; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.05); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="overlay">
+        <div class="main-num">11</div>
+        <div class="hint-text">Touch to connect the stars</div>
+    </div>
+
+    <canvas id="stars"></canvas>
+
+    <script>
+        const canvas = document.getElementById('stars');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const particles = [];
+        const touch = { x: null, y: null };
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 0.5;
+                this.speedX = Math.random() * 0.6 - 0.3;
+                this.speedY = Math.random() * 0.6 - 0.3;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+
+                if (this.x > canvas.width || this.x < 0) this.speedX *= -1;
+                if (this.y > canvas.height || this.y < 0) this.speedY *= -1;
+
+                // جذب شدن به لمس گوشی
+                if (touch.x && touch.y) {
+                    let dx = touch.x - this.x;
+                    let dy = touch.y - this.y;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < 120) {
+                        this.x += dx * 0.05;
+                        this.y += dy * 0.05;
+                    }
+                }
+            }
+            draw() {
+                ctx.fillStyle = '#AEC6CF'; // رنگ آبی پاستیلی ستاره‌ها
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function init() {
+            for (let i = 0; i < 111; i++) { // تعداد ستاره‌ها مضربی از ۱۱
+                particles.push(new Particle());
+            }
+        }
+
+        function connect() {
+            for (let a = 0; a < particles.length; a++) {
+                for (let b = a; b < particles.length; b++) {
+                    let dx = particles[a].x - particles[b].x;
+                    let dy = particles[a].y - particles[b].y;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < 70) {
+                        ctx.strokeStyle = 'rgba(174, 198, 207, ' + (1 - distance/70) * 0.2 + ')';
+                        ctx.lineWidth = 0.5;
+                        ctx.beginPath();
+                        ctx.moveTo(particles[a].x, particles[a].y);
+                        ctx.lineTo(particles[b].x, particles[b].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            connect();
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('touchstart', (e) => {
+            touch.x = e.touches[0].clientX;
+            touch.y = e.touches[0].clientY;
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            touch.x = e.touches[0].clientX;
+            touch.y = e.touches[0].clientY;
+        });
+
+        window.addEventListener('touchend', () => {
+            touch.x = null;
+            touch.y = null;
+        });
+
+        init();
+        animate();
+    </script>
+</body>
+</html>
