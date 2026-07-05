@@ -47,23 +47,6 @@
             color: rgba(255, 255, 255, 0.95);
             text-shadow: 0 0 35px rgba(255, 255, 255, 0.8);
         }
-        .text-container {
-            margin-top: 20px;
-        }
-        .text-en {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.5);
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-        }
-        .text-fa {
-            font-size: 13px;
-            color: rgba(255, 255, 255, 0.5);
-            letter-spacing: 1px;
-            font-weight: 300;
-            opacity: 0.8;
-        }
     </style>
 </head>
 <body>
@@ -72,10 +55,6 @@
 
     <div class="container">
         <div class="main-number" id="center11">11</div>
-        <div class="text-container">
-            <div class="text-en">Touch to connect the stars</div>
-            <div class="text-fa">لمس کنید تا ستاره‌ها به هم متصل شوند</div>
-        </div>
     </div>
 
     <audio id="bgMusic" src="music.mp3" preload="auto"></audio>
@@ -92,47 +71,135 @@
         window.addEventListener('resize', () => {
             width = canvas.width = window.innerWidth;
             height = canvas.height = window.innerHeight;
+            generateFacePattern();
         });
 
-        const mouse = { x: null, y: null, active: false, radius: 120 };
+        const mouse = { x: null, y: null, active: false, radius: 150 };
         const particleCount = 450; 
         const particles = [];
+        
+        let isTimeForFace = false;
+        let startTime = Date.now();
+        const faceTargets = [];
+
+        function generateFacePattern() {
+            faceTargets.length = 0;
+            const cx = width / 2;
+            const cy = height / 2 - 20;
+
+            for (let i = 0; i < particleCount; i++) {
+                let t = i / particleCount;
+                let tx = 0, ty = 0;
+
+                if (t < 0.15) { 
+                    let angle = (t / 0.15) * Math.PI * 1.2 - 0.4;
+                    tx = cx + Math.cos(angle) * 140 - (t * 50);
+                    ty = cy + Math.sin(angle) * 180 - 40;
+                } else if (t < 0.30) { 
+                    let p = (t - 0.15) / 0.15;
+                    tx = cx + 90 + (p * 60);
+                    ty = cy - 30 + (p * 220);
+                } else if (t < 0.45) { 
+                    let p = (t - 0.30) / 0.15;
+                    tx = cx - 65 + (p * 40);
+                    ty = cy - 15 + Math.sin(p * Math.PI) * 12 + (p * 5);
+                } else if (t < 0.60) { 
+                    let p = (t - 0.45) / 0.15;
+                    tx = cx + 15 + (p * 45);
+                    ty = cy - 35 + Math.sin(p * Math.PI) * 10 - (p * 2);
+                } else if (t < 0.75) { 
+                    let p = (t - 0.60) / 0.15;
+                    tx = cx - 35 + (p * 65);
+                    ty = cy + 45 + Math.sin(p * Math.PI) * 14 + (p * 8);
+                } else if (t < 0.90) { 
+                    let p = (t - 0.75) / 0.15;
+                    tx = cx - 90 + (p * 140);
+                    ty = cy + 20 + (p * 90);
+                } else { 
+                    let p = (t - 0.90) / 0.10;
+                    tx = cx - 110 + Math.sin(p * Math.PI * 1.5) * 25 - (p * 15);
+                    ty = cy - 40 + (p * 120);
+                }
+
+                faceTargets.push({ x: tx, y: ty });
+            }
+        }
+
+        generateFacePattern();
 
         class Particle {
-            constructor() {
+            constructor(index) {
+                this.index = index;
                 this.x = Math.random() * width;
                 this.y = Math.random() * height;
+                
+                // ذخیره موقعیت قبل از فرار برای بازگشت دقیق
+                this.returnX = this.x;
+                this.returnY = this.y;
+
                 this.baseSize = 6;
                 this.size = this.baseSize;
-                this.speedX = (Math.random() - 0.5) * 0.4;
-                this.speedY = (Math.random() - 0.5) * 0.4;
+                this.speedX = (Math.random() - 0.5) * 0.5;
+                this.speedY = (Math.random() - 0.5) * 0.5;
                 this.opacity = Math.random() * 0.4 + 0.2;
+                this.escapeTimer = 0; // تایمر برای کنترل زمان بازگشت ۴ ثانیه‌ای
             }
 
             update() {
-                this.x += this.speedX;
-                this.y += this.speedY;
+                // تغییر زمان به ۷ ثانیه (۷۰۰۰ میلی‌ثانیه)
+                if (!isTimeForFace && Date.now() - startTime > 7000) {
+                    isTimeForFace = true;
+                }
 
-                if (this.x < 0 || this.x > width) this.speedX *= -1;
-                if (this.y < 0 || this.y > height) this.speedY *= -1;
+                // تعیین موقعیت اصلی که ذره باید در آن قرار بگیرد
+                let mainTargetX, mainTargetY;
+                if (isTimeForFace && faceTargets[this.index]) {
+                    mainTargetX = faceTargets[this.index].x;
+                    mainTargetY = faceTargets[this.index].y;
+                } else {
+                    this.returnX += this.speedX;
+                    this.returnY += this.speedY;
 
+                    if (this.returnX < 0 || this.returnX > width) this.speedX *= -1;
+                    if (this.returnY < 0 || this.returnY > height) this.speedY *= -1;
+                    
+                    mainTargetX = this.returnX;
+                    mainTargetY = this.returnY;
+                }
+
+                // بررسی تعامل لمس و افکت فرار کردن اعداد
                 if (mouse.active) {
-                    const dx = mouse.x - this.x;
-                    const dy = mouse.y - this.y;
+                    const dx = this.x - mouse.x;
+                    const dy = this.y - mouse.y;
                     const distance = Math.sqrt(dx * dx + dy * dy);
 
                     if (distance < mouse.radius) {
+                        // ایجاد نیروی فرار به سمت بیرون از موقعیت انگشت
                         const force = (mouse.radius - distance) / mouse.radius;
-                        this.x += (dx / distance) * force * 4;
-                        this.y += (dy / distance) * force * 4;
-                        this.size = this.baseSize + (force * 14);
-                        if(this.opacity < 0.9) this.opacity += 0.05;
-                    } else {
-                        if (this.size > this.baseSize) this.size -= 0.3;
-                        if (this.opacity > 0.4) this.opacity -= 0.01;
+                        this.x += (dx / (distance || 1)) * force * 12;
+                        this.y += (dy / (distance || 1)) * force * 12;
+                        this.size = this.baseSize + (force * 5);
+                        this.escapeTimer = 240; // تنظیم فریم‌ها برای بازگشت ۴ ثانیه‌ای (۶۰ فریم در ثانیه * ۴ = ۲۴۰)
                     }
+                }
+
+                // بازگشت نرم به حالت اول دقیقاً در عرض ۴ ثانیه بعد از رها کردن لمس
+                if (this.escapeTimer > 0) {
+                    this.escapeTimer--;
+                    // سرعت بازگشت ملایم (دقیقاً ۴ ثانیه طول می‌کشد تا کاملاً سر جایش بنشیند)
+                    this.x += (mainTargetX - this.x) * 0.025;
+                    this.y += (mainTargetY - this.y) * 0.025;
+                    if (this.size > this.baseSize) this.size -= 0.05;
                 } else {
-                    if (this.size > this.baseSize) this.size -= 0.3;
+                    // حرکت یا استقرار عادی
+                    this.x += (mainTargetX - this.x) * 0.05;
+                    this.y += (mainTargetY - this.y) * 0.05;
+                    this.size = this.baseSize;
+                }
+
+                // تنظیم شفافیت متناسب با وضعیت چهره
+                if (isTimeForFace) {
+                    if (this.opacity < 0.7) this.opacity += 0.02;
                 }
             }
 
@@ -146,29 +213,26 @@
         }
 
         for (let i = 0; i < particleCount; i++) {
-            particles.push(new Particle());
+            particles.push(new Particle(i));
         }
 
         let connectionCount = 0;
         let isMusicPlaying = false;
         let hasInteracted = false;
 
-        // تابع شروع تایمر ۳ ثانیه‌ای برای پخش موزیک
         function startMusicTimer() {
             if (!hasInteracted) {
                 hasInteracted = true;
-                
-                // افکت پررنگ شدن عدد ۱۱ وسط بعد از ۳ ثانیه همزمان با پخش آهنگ
                 setTimeout(() => {
                     if (!isMusicPlaying) {
                         bgMusic.play()
                             .then(() => {
                                 isMusicPlaying = true;
-                                center11.classList.add('complete'); // روشن شدن عدد ۱۱ همزمان با موزیک
+                                center11.classList.add('complete');
                             })
-                            .catch(e => console.log("خطای پخش:", e));
+                            .catch(e => console.log("خطای صوتی:", e));
                     }
-                }, 3000); // ۳۰۰۰ میلی‌ثانیه یعنی ۳ ثانیه
+                }, 3000); 
             }
         }
 
@@ -185,7 +249,6 @@
                     if (connectionCount > 100) {
                         connectionCount = 100;
                         if (!isMusicPlaying && !hasInteracted) {
-                            // اگر کاربر خودش سریع رفت روی ۱۱، آهنگ فوری پخش شود
                             center11.classList.add('complete');
                             bgMusic.play().then(() => { isMusicPlaying = true; }).catch(e => console.log(e));
                         }
@@ -211,6 +274,50 @@
                     const dy = particles[i].y - particles[j].y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
 
-                    if (dist < 45) { 
-                        ctx
-        
+                    const maxDist = isTimeForFace ? 35 : 45;
+                    if (dist < maxDist) { 
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${(1 - dist/maxDist) * 0.12})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            checkCompletion();
+            requestAnimationFrame(animate);
+        }
+
+        const startAction = (e) => {
+            mouse.active = true;
+            const point = e.touches ? e.touches[0] : e;
+            mouse.x = point.clientX;
+            mouse.y = point.clientY;
+            startMusicTimer(); 
+        };
+
+        const moveAction = (e) => {
+            if (!mouse.active) return;
+            const point = e.touches ? e.touches[0] : e;
+            mouse.x = point.clientX;
+            mouse.y = point.clientY;
+        };
+
+        const endAction = () => {
+            mouse.active = false;
+        };
+
+        window.addEventListener('mousedown', startAction);
+        window.addEventListener('mousemove', moveAction);
+        window.addEventListener('mouseup', endAction);
+
+        window.addEventListener('touchstart', startAction);
+        window.addEventListener('touchmove', moveAction);
+        window.addEventListener('touchend', endAction);
+
+        animate();
+    </script>
+</body>
+</html>
