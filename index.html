@@ -1,149 +1,238 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fa">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Core Project</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background: #050811; font-family: sans-serif; }
-        canvas { display: block; width: 100%; height: 100%; }
-        .overlay {
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #05070b;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        .container {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            color: #ffffff;
             text-align: center;
+            z-index: 2;
             pointer-events: none;
-            mix-blend-mode: lightening;
         }
-        .main-num {
-            font-size: 7rem;
-            font-weight: 800;
-            color: #AEC6CF; /* آبی پاستیلی */
-            text-shadow: 0 0 30px rgba(174, 198, 207, 0.6);
-            opacity: 0.15;
+        .main-number {
+            font-size: 120px;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.45);
             letter-spacing: 10px;
-            animation: pulse 4s infinite ease-in-out;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+            transition: color 0.5s ease, text-shadow 0.5s ease;
         }
-        .hint-text {
-            color: rgba(255, 255, 255, 0.4);
-            font-size: 0.9rem;
+        .main-number.complete {
+            color: rgba(255, 255, 255, 0.95);
+            text-shadow: 0 0 35px rgba(255, 255, 255, 0.8);
+        }
+        .text-container {
             margin-top: 20px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
         }
-        @keyframes pulse {
-            0%, 100% { opacity: 0.15; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(1.05); }
+        .text-en {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .text-fa {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 1px;
+            font-weight: 300;
+            opacity: 0.8;
         }
     </style>
 </head>
 <body>
 
-    <div class="overlay">
-        <div class="main-num">11</div>
-        <div class="hint-text">Touch to connect the stars</div>
+    <canvas id="spaceCanvas"></canvas>
+
+    <div class="container">
+        <div class="main-number" id="center11">11</div>
+        <div class="text-container">
+            <div class="text-en">Touch to connect the stars</div>
+            <div class="text-fa">لمس کنید تا ستاره‌ها به هم متصل شوند</div>
+        </div>
     </div>
 
-    <canvas id="stars"></canvas>
+    <audio id="bgMusic" src="music.mp3" preload="auto"></audio>
 
     <script>
-        const canvas = document.getElementById('stars');
+        const canvas = document.getElementById('spaceCanvas');
         const ctx = canvas.getContext('2d');
+        const center11 = document.getElementById('center11');
+        const bgMusic = document.getElementById('bgMusic');
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
 
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+
+        const mouse = { x: null, y: null, active: false, radius: 120 };
+        const particleCount = 450; 
         const particles = [];
-        const touch = { x: null, y: null };
 
         class Particle {
             constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
-                this.size = Math.random() * 2 + 0.5;
-                this.speedX = Math.random() * 0.6 - 0.3;
-                this.speedY = Math.random() * 0.6 - 0.3;
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.baseSize = 6;
+                this.size = this.baseSize;
+                this.speedX = (Math.random() - 0.5) * 0.4;
+                this.speedY = (Math.random() - 0.5) * 0.4;
+                this.opacity = Math.random() * 0.4 + 0.2;
             }
+
             update() {
                 this.x += this.speedX;
                 this.y += this.speedY;
 
-                if (this.x > canvas.width || this.x < 0) this.speedX *= -1;
-                if (this.y > canvas.height || this.y < 0) this.speedY *= -1;
+                if (this.x < 0 || this.x > width) this.speedX *= -1;
+                if (this.y < 0 || this.y > height) this.speedY *= -1;
 
-                // جذب شدن به لمس گوشی
-                if (touch.x && touch.y) {
-                    let dx = touch.x - this.x;
-                    let dy = touch.y - this.y;
-                    let distance = Math.sqrt(dx * dx + dy * dy);
-                    if (distance < 120) {
-                        this.x += dx * 0.05;
-                        this.y += dy * 0.05;
+                if (mouse.active) {
+                    const dx = mouse.x - this.x;
+                    const dy = mouse.y - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < mouse.radius) {
+                        const force = (mouse.radius - distance) / mouse.radius;
+                        this.x += (dx / distance) * force * 4;
+                        this.y += (dy / distance) * force * 4;
+                        this.size = this.baseSize + (force * 14);
+                        if(this.opacity < 0.9) this.opacity += 0.05;
+                    } else {
+                        if (this.size > this.baseSize) this.size -= 0.3;
+                        if (this.opacity > 0.4) this.opacity -= 0.01;
                     }
+                } else {
+                    if (this.size > this.baseSize) this.size -= 0.3;
                 }
             }
+
             draw() {
-                ctx.fillStyle = '#AEC6CF'; // رنگ آبی پاستیلی ستاره‌ها
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                ctx.font = `bold ${this.size}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('11', this.x, this.y);
             }
         }
 
-        function init() {
-            for (let i = 0; i < 111; i++) { // تعداد ستاره‌ها مضربی از ۱۱
-                particles.push(new Particle());
-            }
+        for (let i = 0; i < particleCount; i++) {
+            particles.push(new Particle());
         }
 
-        function connect() {
-            for (let a = 0; a < particles.length; a++) {
-                for (let b = a; b < particles.length; b++) {
-                    let dx = particles[a].x - particles[b].x;
-                    let dy = particles[a].y - particles[b].y;
-                    let distance = Math.sqrt(dx * dx + dy * dy);
+        let connectionCount = 0;
+        let isMusicPlaying = false;
 
-                    if (distance < 70) {
-                        ctx.strokeStyle = 'rgba(174, 198, 207, ' + (1 - distance/70) * 0.2 + ')';
-                        ctx.lineWidth = 0.5;
-                        ctx.beginPath();
-                        ctx.moveTo(particles[a].x, particles[a].y);
-                        ctx.lineTo(particles[b].x, particles[b].y);
-                        ctx.stroke();
+        function checkCompletion() {
+            if (mouse.active) {
+                const centerX = width / 2;
+                const centerY = height / 2;
+                const dx = mouse.x - centerX;
+                const dy = mouse.y - centerY;
+                const distToCenter = Math.sqrt(dx * dx + dy * dy);
+
+                if (distToCenter < 130) {
+                    connectionCount += 1.5;
+                    if (connectionCount > 100) {
+                        connectionCount = 100;
+                        center11.classList.add('complete');
+                        
+                        if (!isMusicPlaying) {
+                            bgMusic.play().catch(e => console.log("خطای پخش خودکار:", e));
+                            isMusicPlaying = true;
+                        }
                     }
+                }
+            } else {
+                if (connectionCount > 0) connectionCount -= 1;
+                if (connectionCount < 100) {
+                    center11.classList.remove('complete');
                 }
             }
         }
 
         function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particles.forEach(p => {
-                p.update();
-                p.draw();
-            });
-            connect();
+            ctx.clearRect(0, 0, width, height);
+            
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < 45) { 
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${(1 - dist/45) * 0.12})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            checkCompletion();
             requestAnimationFrame(animate);
         }
 
-        window.addEventListener('touchstart', (e) => {
-            touch.x = e.touches[0].clientX;
-            touch.y = e.touches[0].clientY;
-        });
+        const startAction = (e) => {
+            mouse.active = true;
+            const point = e.touches ? e.touches[0] : e;
+            mouse.x = point.clientX;
+            mouse.y = point.clientY;
+        };
 
-        window.addEventListener('touchmove', (e) => {
-            touch.x = e.touches[0].clientX;
-            touch.y = e.touches[0].clientY;
-        });
+        const moveAction = (e) => {
+            if (!mouse.active) return;
+            const point = e.touches ? e.touches[0] : e;
+            mouse.x = point.clientX;
+            mouse.y = point.clientY;
+        };
 
-        window.addEventListener('touchend', () => {
-            touch.x = null;
-            touch.y = null;
-        });
+        const endAction = () => {
+            mouse.active = false;
+        };
 
-        init();
+        window.addEventListener('mousedown', startAction);
+        window.addEventListener('mousemove', moveAction);
+        window.addEventListener('mouseup', endAction);
+
+        window.addEventListener('touchstart', startAction);
+        window.addEventListener('touchmove', moveAction);
+        window.addEventListener('touchend', endAction);
+
         animate();
     </script>
 </body>
