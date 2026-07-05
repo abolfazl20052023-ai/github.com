@@ -8,6 +8,7 @@
         * {
             box-sizing: border-box;
             user-select: none;
+            -webkit-user-select: none;
         }
         body, html {
             margin: 0;
@@ -26,16 +27,43 @@
             height: 100%;
             z-index: 1;
         }
+        .container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 2;
+            pointer-events: none;
+        }
+        .main-number {
+            font-size: 120px;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.45);
+            letter-spacing: 10px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+            transition: color 0.5s ease, text-shadow 0.5s ease;
+        }
+        .main-number.complete {
+            color: rgba(255, 255, 255, 0.95);
+            text-shadow: 0 0 35px rgba(255, 255, 255, 0.8);
+        }
     </style>
 </head>
 <body>
 
     <canvas id="spaceCanvas"></canvas>
-    <audio id="bgMusic" src="music.mp3" preload="auto" loop></audio>
+
+    <div class="container">
+        <div class="main-number" id="center11">11</div>
+    </div>
+
+    <audio id="bgMusic" src="music.mp3" preload="auto"></audio>
 
     <script>
         const canvas = document.getElementById('spaceCanvas');
         const ctx = canvas.getContext('2d');
+        const center11 = document.getElementById('center11');
         const bgMusic = document.getElementById('bgMusic');
 
         let width = canvas.width = window.innerWidth;
@@ -47,55 +75,44 @@
             generate11Pattern();
         });
 
-        const mouse = { x: null, y: null, active: false, radius: 160 };
-        const particleCount = 1000; // افزایش تعداد ذرات به ۱۰۰۰ عدد برای تراکم بیشتر
+        const mouse = { x: null, y: null, active: false, radius: 130 };
+        const particleCount = 850; // تعداد بهینه ذرات برای داشتن بالاترین سرعت و تراکم عالی
         const particles = [];
         
         let isTimeFor11 = false;
-        let startTime = Date.now();
+        const startTime = Date.now();
         const targets11 = [];
 
-        // الگوریتم ریاضی فوق‌العاده خاص برای چیدمان ۱۰۰۰ ذره به شکل عدد 11 بزرگ در مرکز
         function generate11Pattern() {
             targets11.length = 0;
             const cx = width / 2;
             const cy = height / 2;
-            
-            // سایز ماتریکسی عدد ۱۱ بزرگ
-            const scale = Math.min(width, height) * 0.6; 
+            const scale = Math.min(width, height) * 0.5; 
 
             for (let i = 0; i < particleCount; i++) {
                 let tx = cx;
                 let ty = cy;
                 
-                // تقسیم ذرات بین رقم سمت چپ و رقم سمت راست عدد 11
                 if (i < particleCount / 2) {
-                    // رقم اول (سمت چپ)
                     let p = i / (particleCount / 2);
                     tx = cx - (scale * 0.18);
                     ty = cy - (scale * 0.4) + (p * scale * 0.8);
-                    
-                    // افکت ضخامت و سر کج عدد ۱
                     if (p < 0.15) {
                         tx -= (0.15 - p) * scale * 0.5;
                         ty += (0.15 - p) * scale * 0.2;
                     }
                 } else {
-                    // رقم دوم (سمت راست)
                     let p = (i - particleCount / 2) / (particleCount / 2);
                     tx = cx + (scale * 0.18);
                     ty = cy - (scale * 0.4) + (p * scale * 0.8);
-                    
-                    // افکت ضخامت و سر کج عدد ۱
                     if (p < 0.15) {
                         tx -= (0.15 - p) * scale * 0.5;
                         ty += (0.15 - p) * scale * 0.2;
                     }
                 }
 
-                // ایجاد یک پخش‌شدگی جزئی سه‌بعدی و جذاب حول محور اصلی خطوط برای خاص‌تر شدن ظاهر
-                tx += (Math.random() - 0.5) * 16;
-                ty += (Math.random() - 0.5) * 16;
+                tx += (Math.random() - 0.5) * 22;
+                ty += (Math.random() - 0.5) * 22;
 
                 targets11.push({ x: tx, y: ty });
             }
@@ -111,19 +128,18 @@
                 this.returnX = this.x;
                 this.returnY = this.y;
 
-                this.baseSize = Math.random() * 4 + 4; // تنوع سایز ذرات بین ۴ تا ۸
+                this.baseSize = Math.random() * 3 + 4; 
                 this.size = this.baseSize;
-                this.speedX = (Math.random() - 0.5) * 0.8;
-                this.speedY = (Math.random() - 0.5) * 0.8;
+                this.speedX = (Math.random() - 0.5) * 0.9;
+                this.speedY = (Math.random() - 0.5) * 0.9;
                 this.opacity = Math.random() * 0.4 + 0.2;
                 this.escapeTimer = 0; 
-                this.angleOffset = Math.random() * Math.PI * 2; // برای انیمیشن چرخشی ورود
             }
 
             update() {
-                // سوییچ به حالت ساختار ۱۱ بزرگ بعد از ۷ ثانیه
-                if (!isTimeFor11 && Date.now() - startTime > 7000) {
+                if (!isTimeFor11 && Date.now() - startTime > 4000) {
                     isTimeFor11 = true;
+                    center11.classList.add('complete');
                 }
 
                 let mainTargetX, mainTargetY;
@@ -141,7 +157,7 @@
                     mainTargetY = this.returnY;
                 }
 
-                // مکانیسم فرار ذرات هنگام لمس صفحه
+                // الگوریتم فرار بهینه‌سازی شده و فوق‌العاده سریع بدون ایجاد لگ
                 if (mouse.active) {
                     const dx = this.x - mouse.x;
                     const dy = this.y - mouse.y;
@@ -149,35 +165,27 @@
 
                     if (distance < mouse.radius) {
                         const force = (mouse.radius - distance) / mouse.radius;
-                        // فرار بسیار سریع و هیجانی اعداد ۱۱
-                        this.x += (dx / (distance || 1)) * force * 16;
-                        this.y += (dy / (distance || 1)) * force * 16;
-                        this.size = this.baseSize + (force * 3);
-                        this.escapeTimer = 240; 
+                        this.x += (dx / (distance || 1)) * force * 14;
+                        this.y += (dy / (distance || 1)) * force * 14;
+                        this.size = this.baseSize + (force * 2.5);
+                        this.escapeTimer = 240; // بازگشت در عرض ۴ ثانیه (60 * 4)
                     }
                 }
 
-                // بازگشت فوق‌العاده نرم و دقیق در عرض ۴ ثانیه
+                // بازگشت نرم و بدون باگ
                 if (this.escapeTimer > 0) {
                     this.escapeTimer--;
                     this.x += (mainTargetX - this.x) * 0.025;
                     this.y += (mainTargetY - this.y) * 0.025;
-                    if (this.size > this.baseSize) this.size -= 0.05;
+                    if (this.size > this.baseSize) this.size -= 0.04;
                 } else {
-                    if (isTimeFor11) {
-                        // انیمیشن چرخشی خاص و کهکشانی برای استقرار روی عدد ۱۱ بزرگ
-                        this.x += (mainTargetX - this.x) * 0.04;
-                        this.y += (mainTargetY - this.y) * 0.04;
-                    } else {
-                        this.x += (mainTargetX - this.x) * 0.06;
-                        this.y += (mainTargetY - this.y) * 0.06;
-                    }
+                    this.x += (mainTargetX - this.x) * 0.05;
+                    this.y += (mainTargetY - this.y) * 0.05;
                     this.size = this.baseSize;
                 }
 
-                // افزایش درخشش و وضوح ذرات وقتی تبدیل به ۱۱ بزرگ می‌شوند
-                if (isTimeFor11) {
-                    if (this.opacity < 0.85) this.opacity += 0.01;
+                if (isTimeFor11 && this.opacity < 0.75) {
+                    this.opacity += 0.01;
                 }
             }
 
@@ -194,52 +202,44 @@
             particles.push(new Particle(i));
         }
 
-        let isMusicPlaying = false;
-        let hasInteracted = false;
-
-        // تابع پیشرفته حل مشکل بی صدا بودن مرورگرها
-        function startMusicTimer() {
-            if (!hasInteracted) {
-                hasInteracted = true;
-                
-                // پخش یک صدای خالی فوری برای باز کردن قفل صوتی مرورگر گوشی
-                bgMusic.play().then(() => {
-                    bgMusic.pause();
-                    bgMusic.currentTime = 0;
-                }).catch(e => console.log(e));
-
-                // پخش اصلی و دقیق سر ۳ ثانیه بعد از تعامل
-                setTimeout(() => {
-                    if (!isMusicPlaying) {
-                        bgMusic.play()
-                            .then(() => { isMusicPlaying = true; })
-                            .catch(e => console.log("خطا در پخش صوتی:", e));
-                    }
-                }, 3000); 
-            }
-        }
+        // پخش خودکار سر ۳ ثانیه به محض باز شدن سایت
+        setTimeout(() => {
+            bgMusic.play().catch(e => {
+                console.log("مرورگر پخش خودکار را محدود کرد. منتظر اولین لمس...");
+                const unlock = () => {
+                    bgMusic.play();
+                    window.removeEventListener('touchstart', unlock);
+                    window.removeEventListener('mousemove', unlock);
+                };
+                window.addEventListener('touchstart', unlock);
+                window.addEventListener('mousemove', unlock);
+            });
+        }, 3000);
 
         function animate() {
             ctx.clearRect(0, 0, width, height);
             
+            // بهینه‌سازی پیشرفته لوپ خطوط: فقط ۱ خط در میان پردازش می‌شود تا دستگاه هنگ نکند
             for (let i = 0; i < particles.length; i++) {
                 particles[i].update();
                 particles[i].draw();
 
-                // خطوط اتصال ماتریکسی بین اعداد
-                for (let j = i + 1; j < particles.length; j++) {
+                const step = isTimeFor11 ? 3 : 2; // کاهش بار پردازشی خطوط در زمان‌های شلوغ
+                for (let j = i + 1; j < particles.length; j += step) {
                     const dx = particles[i].x - particles[j].x;
                     const dy = particles[i].y - particles[j].y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-
-                    const maxDist = isTimeFor11 ? 30 : 40;
-                    if (dist < maxDist) { 
-                        ctx.strokeStyle = `rgba(255, 255, 255, ${(1 - dist/maxDist) * 0.10})`;
-                        ctx.lineWidth = 0.4;
-                        ctx.beginPath();
-                        ctx.moveTo(particles[i].x, particles[i].y);
-                        ctx.lineTo(particles[j].x, particles[j].y);
-                        ctx.stroke();
+                    
+                    // بررسی سریع فاصله قبل از محاسبات سنگین رادیکال
+                    if (Math.abs(dx) < 35 && Math.abs(dy) < 35) {
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 35) {
+                            ctx.strokeStyle = `rgba(255, 255, 255, ${(1 - dist / 35) * 0.08})`;
+                            ctx.lineWidth = 0.3;
+                            ctx.beginPath();
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.stroke();
+                        }
                     }
                 }
             }
@@ -252,7 +252,6 @@
             const point = e.touches ? e.touches[0] : e;
             mouse.x = point.clientX;
             mouse.y = point.clientY;
-            startMusicTimer(); 
         };
 
         const moveAction = (e) => {
@@ -267,11 +266,11 @@
         };
 
         window.addEventListener('mousedown', startAction);
-        window.addEventListener('mousemove', moveAction);
+        window.addEventListener('mousemove', moveAction, { passive: true });
         window.addEventListener('mouseup', endAction);
 
         window.addEventListener('touchstart', startAction);
-        window.addEventListener('touchmove', moveAction);
+        window.addEventListener('touchmove', moveAction, { passive: true });
         window.addEventListener('touchend', endAction);
 
         animate();
