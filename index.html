@@ -26,43 +26,16 @@
             height: 100%;
             z-index: 1;
         }
-        .container {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            z-index: 2;
-            pointer-events: none;
-        }
-        .main-number {
-            font-size: 120px;
-            font-weight: bold;
-            color: rgba(255, 255, 255, 0.45);
-            letter-spacing: 10px;
-            text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
-            transition: color 0.5s ease, text-shadow 0.5s ease;
-        }
-        .main-number.complete {
-            color: rgba(255, 255, 255, 0.95);
-            text-shadow: 0 0 35px rgba(255, 255, 255, 0.8);
-        }
     </style>
 </head>
 <body>
 
     <canvas id="spaceCanvas"></canvas>
-
-    <div class="container">
-        <div class="main-number" id="center11">11</div>
-    </div>
-
-    <audio id="bgMusic" src="music.mp3" preload="auto"></audio>
+    <audio id="bgMusic" src="music.mp3" preload="auto" loop></audio>
 
     <script>
         const canvas = document.getElementById('spaceCanvas');
         const ctx = canvas.getContext('2d');
-        const center11 = document.getElementById('center11');
         const bgMusic = document.getElementById('bgMusic');
 
         let width = canvas.width = window.innerWidth;
@@ -71,61 +44,64 @@
         window.addEventListener('resize', () => {
             width = canvas.width = window.innerWidth;
             height = canvas.height = window.innerHeight;
-            generateFacePattern();
+            generate11Pattern();
         });
 
-        const mouse = { x: null, y: null, active: false, radius: 140 };
-        const particleCount = 450; 
+        const mouse = { x: null, y: null, active: false, radius: 160 };
+        const particleCount = 1000; // افزایش تعداد ذرات به ۱۰۰۰ عدد برای تراکم بیشتر
         const particles = [];
         
-        let isTimeForFace = false;
+        let isTimeFor11 = false;
         let startTime = Date.now();
-        const faceTargets = [];
+        const targets11 = [];
 
-        function generateFacePattern() {
-            faceTargets.length = 0;
+        // الگوریتم ریاضی فوق‌العاده خاص برای چیدمان ۱۰۰۰ ذره به شکل عدد 11 بزرگ در مرکز
+        function generate11Pattern() {
+            targets11.length = 0;
             const cx = width / 2;
-            const cy = height / 2 - 20;
+            const cy = height / 2;
+            
+            // سایز ماتریکسی عدد ۱۱ بزرگ
+            const scale = Math.min(width, height) * 0.6; 
 
             for (let i = 0; i < particleCount; i++) {
-                let t = i / particleCount;
-                let tx = 0, ty = 0;
-
-                if (t < 0.15) { 
-                    let angle = (t / 0.15) * Math.PI * 1.2 - 0.4;
-                    tx = cx + Math.cos(angle) * 140 - (t * 50);
-                    ty = cy + Math.sin(angle) * 180 - 40;
-                } else if (t < 0.30) { 
-                    let p = (t - 0.15) / 0.15;
-                    tx = cx + 90 + (p * 60);
-                    ty = cy - 30 + (p * 220);
-                } else if (t < 0.45) { 
-                    let p = (t - 0.30) / 0.15;
-                    tx = cx - 65 + (p * 40);
-                    ty = cy - 15 + Math.sin(p * Math.PI) * 12 + (p * 5);
-                } else if (t < 0.60) { 
-                    let p = (t - 0.45) / 0.15;
-                    tx = cx + 15 + (p * 45);
-                    ty = cy - 35 + Math.sin(p * Math.PI) * 10 - (p * 2);
-                } else if (t < 0.75) { 
-                    let p = (t - 0.60) / 0.15;
-                    tx = cx - 35 + (p * 65);
-                    ty = cy + 45 + Math.sin(p * Math.PI) * 14 + (p * 8);
-                } else if (t < 0.90) { 
-                    let p = (t - 0.75) / 0.15;
-                    tx = cx - 90 + (p * 140);
-                    ty = cy + 20 + (p * 90);
-                } else { 
-                    let p = (t - 0.90) / 0.10;
-                    tx = cx - 110 + Math.sin(p * Math.PI * 1.5) * 25 - (p * 15);
-                    ty = cy - 40 + (p * 120);
+                let tx = cx;
+                let ty = cy;
+                
+                // تقسیم ذرات بین رقم سمت چپ و رقم سمت راست عدد 11
+                if (i < particleCount / 2) {
+                    // رقم اول (سمت چپ)
+                    let p = i / (particleCount / 2);
+                    tx = cx - (scale * 0.18);
+                    ty = cy - (scale * 0.4) + (p * scale * 0.8);
+                    
+                    // افکت ضخامت و سر کج عدد ۱
+                    if (p < 0.15) {
+                        tx -= (0.15 - p) * scale * 0.5;
+                        ty += (0.15 - p) * scale * 0.2;
+                    }
+                } else {
+                    // رقم دوم (سمت راست)
+                    let p = (i - particleCount / 2) / (particleCount / 2);
+                    tx = cx + (scale * 0.18);
+                    ty = cy - (scale * 0.4) + (p * scale * 0.8);
+                    
+                    // افکت ضخامت و سر کج عدد ۱
+                    if (p < 0.15) {
+                        tx -= (0.15 - p) * scale * 0.5;
+                        ty += (0.15 - p) * scale * 0.2;
+                    }
                 }
 
-                faceTargets.push({ x: tx, y: ty });
+                // ایجاد یک پخش‌شدگی جزئی سه‌بعدی و جذاب حول محور اصلی خطوط برای خاص‌تر شدن ظاهر
+                tx += (Math.random() - 0.5) * 16;
+                ty += (Math.random() - 0.5) * 16;
+
+                targets11.push({ x: tx, y: ty });
             }
         }
 
-        generateFacePattern();
+        generate11Pattern();
 
         class Particle {
             constructor(index) {
@@ -135,24 +111,25 @@
                 this.returnX = this.x;
                 this.returnY = this.y;
 
-                this.baseSize = 6;
+                this.baseSize = Math.random() * 4 + 4; // تنوع سایز ذرات بین ۴ تا ۸
                 this.size = this.baseSize;
-                this.speedX = (Math.random() - 0.5) * 0.5;
-                this.speedY = (Math.random() - 0.5) * 0.5;
+                this.speedX = (Math.random() - 0.5) * 0.8;
+                this.speedY = (Math.random() - 0.5) * 0.8;
                 this.opacity = Math.random() * 0.4 + 0.2;
                 this.escapeTimer = 0; 
+                this.angleOffset = Math.random() * Math.PI * 2; // برای انیمیشن چرخشی ورود
             }
 
             update() {
-                // تبدیل شدن به فرم چهره دقیقاً بعد از ۷ ثانیه
-                if (!isTimeForFace && Date.now() - startTime > 7000) {
-                    isTimeForFace = true;
+                // سوییچ به حالت ساختار ۱۱ بزرگ بعد از ۷ ثانیه
+                if (!isTimeFor11 && Date.now() - startTime > 7000) {
+                    isTimeFor11 = true;
                 }
 
                 let mainTargetX, mainTargetY;
-                if (isTimeForFace && faceTargets[this.index]) {
-                    mainTargetX = faceTargets[this.index].x;
-                    mainTargetY = faceTargets[this.index].y;
+                if (isTimeFor11 && targets11[this.index]) {
+                    mainTargetX = targets11[this.index].x;
+                    mainTargetY = targets11[this.index].y;
                 } else {
                     this.returnX += this.speedX;
                     this.returnY += this.speedY;
@@ -164,7 +141,7 @@
                     mainTargetY = this.returnY;
                 }
 
-                // افکت فرار کردن اعداد ۱۱ کوچک با لمس صفحه
+                // مکانیسم فرار ذرات هنگام لمس صفحه
                 if (mouse.active) {
                     const dx = this.x - mouse.x;
                     const dy = this.y - mouse.y;
@@ -172,27 +149,35 @@
 
                     if (distance < mouse.radius) {
                         const force = (mouse.radius - distance) / mouse.radius;
-                        this.x += (dx / (distance || 1)) * force * 14;
-                        this.y += (dy / (distance || 1)) * force * 14;
-                        this.size = this.baseSize + (force * 4);
-                        this.escapeTimer = 240; // فریم‌ریت برای بازگشت ۴ ثانیه‌ای
+                        // فرار بسیار سریع و هیجانی اعداد ۱۱
+                        this.x += (dx / (distance || 1)) * force * 16;
+                        this.y += (dy / (distance || 1)) * force * 16;
+                        this.size = this.baseSize + (force * 3);
+                        this.escapeTimer = 240; 
                     }
                 }
 
-                // بازگشت ملایم به موقعیت اصلی دقیقاً در عرض ۴ ثانیه
+                // بازگشت فوق‌العاده نرم و دقیق در عرض ۴ ثانیه
                 if (this.escapeTimer > 0) {
                     this.escapeTimer--;
                     this.x += (mainTargetX - this.x) * 0.025;
                     this.y += (mainTargetY - this.y) * 0.025;
                     if (this.size > this.baseSize) this.size -= 0.05;
                 } else {
-                    this.x += (mainTargetX - this.x) * 0.06;
-                    this.y += (mainTargetY - this.y) * 0.06;
+                    if (isTimeFor11) {
+                        // انیمیشن چرخشی خاص و کهکشانی برای استقرار روی عدد ۱۱ بزرگ
+                        this.x += (mainTargetX - this.x) * 0.04;
+                        this.y += (mainTargetY - this.y) * 0.04;
+                    } else {
+                        this.x += (mainTargetX - this.x) * 0.06;
+                        this.y += (mainTargetY - this.y) * 0.06;
+                    }
                     this.size = this.baseSize;
                 }
 
-                if (isTimeForFace) {
-                    if (this.opacity < 0.7) this.opacity += 0.02;
+                // افزایش درخشش و وضوح ذرات وقتی تبدیل به ۱۱ بزرگ می‌شوند
+                if (isTimeFor11) {
+                    if (this.opacity < 0.85) this.opacity += 0.01;
                 }
             }
 
@@ -209,49 +194,28 @@
             particles.push(new Particle(i));
         }
 
-        let connectionCount = 0;
         let isMusicPlaying = false;
         let hasInteracted = false;
 
+        // تابع پیشرفته حل مشکل بی صدا بودن مرورگرها
         function startMusicTimer() {
             if (!hasInteracted) {
                 hasInteracted = true;
+                
+                // پخش یک صدای خالی فوری برای باز کردن قفل صوتی مرورگر گوشی
+                bgMusic.play().then(() => {
+                    bgMusic.pause();
+                    bgMusic.currentTime = 0;
+                }).catch(e => console.log(e));
+
+                // پخش اصلی و دقیق سر ۳ ثانیه بعد از تعامل
                 setTimeout(() => {
                     if (!isMusicPlaying) {
                         bgMusic.play()
-                            .then(() => {
-                                isMusicPlaying = true;
-                                center11.classList.add('complete');
-                            })
-                            .catch(e => console.log("خطای صوتی:", e));
+                            .then(() => { isMusicPlaying = true; })
+                            .catch(e => console.log("خطا در پخش صوتی:", e));
                     }
                 }, 3000); 
-            }
-        }
-
-        function checkCompletion() {
-            if (mouse.active) {
-                const centerX = width / 2;
-                const centerY = height / 2;
-                const dx = mouse.x - centerX;
-                const dy = mouse.y - centerY;
-                const distToCenter = Math.sqrt(dx * dx + dy * dy);
-
-                if (distToCenter < 130) {
-                    connectionCount += 1.5;
-                    if (connectionCount > 100) {
-                        connectionCount = 100;
-                        if (!isMusicPlaying && !hasInteracted) {
-                            center11.classList.add('complete');
-                            bgMusic.play().then(() => { isMusicPlaying = true; }).catch(e => console.log(e));
-                        }
-                    }
-                }
-            } else {
-                if (connectionCount > 0) connectionCount -= 1;
-                if (connectionCount < 100 && !isMusicPlaying) {
-                    center11.classList.remove('complete');
-                }
             }
         }
 
@@ -262,15 +226,16 @@
                 particles[i].update();
                 particles[i].draw();
 
+                // خطوط اتصال ماتریکسی بین اعداد
                 for (let j = i + 1; j < particles.length; j++) {
                     const dx = particles[i].x - particles[j].x;
                     const dy = particles[i].y - particles[j].y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
 
-                    const maxDist = isTimeForFace ? 35 : 45;
+                    const maxDist = isTimeFor11 ? 30 : 40;
                     if (dist < maxDist) { 
-                        ctx.strokeStyle = `rgba(255, 255, 255, ${(1 - dist/maxDist) * 0.12})`;
-                        ctx.lineWidth = 0.5;
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${(1 - dist/maxDist) * 0.10})`;
+                        ctx.lineWidth = 0.4;
                         ctx.beginPath();
                         ctx.moveTo(particles[i].x, particles[i].y);
                         ctx.lineTo(particles[j].x, particles[j].y);
@@ -279,7 +244,6 @@
                 }
             }
 
-            checkCompletion();
             requestAnimationFrame(animate);
         }
 
