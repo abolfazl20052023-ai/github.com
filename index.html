@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Core Project</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #05070b;
+            /* اعمال فونت فانتزی و زیبا روی کل صفحه */
+            font-family: 'Poppins', 'Segoe UI', Tahoma, sans-serif;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        .container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 2;
+            pointer-events: none;
+        }
+        /* استایل نئونی و فوق‌العاده زیبای عدد ۱۱ اصلی پشت صفحه */
+        .main-number {
+            font-size: 140px;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.25);
+            letter-spacing: 5px;
+            text-shadow: 0 0 25px rgba(255, 255, 255, 0.1);
+            transition: color 0.8s ease, text-shadow 0.8s ease;
+        }
+        .main-number.complete {
+            color: rgba(255, 255, 255, 0.95);
+            text-shadow: 0 0 40px rgba(255, 255, 255, 0.8), 0 0 70px rgba(255, 255, 255, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="spaceCanvas"></canvas>
+
+    <div class="container">
+        <div class="main-number" id="center11">11</div>
+    </div>
+
+    <audio id="bgMusic" src="music.mp3" preload="auto"></audio>
+
+    <script>
+        const canvas = document.getElementById('spaceCanvas');
+        const ctx = canvas.getContext('2d');
+        const center11 = document.getElementById('center11');
+        const bgMusic = document.getElementById('bgMusic');
+
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            generate11Pattern();
+        });
+
+        const mouse = { x: null, y: null, active: false, radius: 120 };
+        const particleCount = 600; // تعداد بهینه ذرات برای تضمین بالاترین سرعت بدون لگ در گوشی
+        const particles = [];
+        
+        let isTimeFor11 = false;
+        let globalFrameCount = 0;
+        let isMusicStarted = false; // قفل امنیتی برای جلوگیری از تکرار چندباره موزیک
+        const targets11 = [];
+
+        // الگوریتم چیدمان ذرات دقیقاً بر اساس فونت گرد و ضخیم عدد 11 در مرکز
+        function generate11Pattern() {
+            targets11.length = 0;
+            const cx = width / 2;
+            const cy = height / 2;
+            // تنظیم ابعاد بر اساس اندازه استاندارد فونت ۱۱ وسط
+            const scale = 130; 
+
+            for (let i = 0; i < particleCount; i++) {
+                let tx = cx;
+                let ty = cy;
+                
+                if (i < particleCount / 2) {
+                    // رقم سمت چپ (1 اول)
+                    let p = i / (particleCount / 2);
+                    tx = cx - 42; 
+                    ty = cy - (scale * 0.5) + (p * scale);
+                    
+                    // سر کج و زیبای عدد ۱ بالای خط
+                    if (p < 0.18) {
+                        tx -= (0.18 - p) * scale * 0.4;
+                        ty += (0.18 - p) * scale * 0.1;
+                    }
+                } else {
+                    // رقم سمت راست (1 دوم)
+                    let p = (i - particleCount / 2) / (particleCount / 2);
+                    tx = cx + 42; 
+                    ty = cy - (scale * 0.5) + (p * scale);
+                    
+                    // سر کج و زیبای عدد ۱ بالای خط
+                    if (p < 0.18) {
+                        tx -= (0.18 - p) * scale * 0.4;
+                        ty += (0.18 - p) * scale * 0.1;
+                    }
+                }
+
+                // پخش شدگی نئونی بسیار ظریف دور خطوط اصلی عدد ۱۱
+                tx += (Math.random() - 0.5) * 14;
+                ty += (Math.random() - 0.5) * 14;
+
+                targets11.push({ x: tx, y: ty });
+            }
+        }
+
+        generate11Pattern();
+
+        class Particle {
+            constructor(index) {
+                this.index = index;
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.returnX = this.x;
+                this.returnY = this.y;
+
+                this.baseSize = Math.random() * 3 + 4; // سایز ظریف و فانتزی ذرات ریز
+                this.size = this.baseSize;
+                this.speedX = (Math.random() - 0.5) * 1.2;
+                this.speedY = (Math.random() - 0.5) * 1.2;
+                this.opacity = Math.random() * 0.5 + 0.2;
+                this.escapeTimer = 0; 
+            }
+
+            update() {
+                let mainTargetX, mainTargetY;
+                if (isTimeFor11 && targets11[this.index]) {
+                    mainTargetX = targets11[this.index].x;
+                    mainTargetY = targets11[this.index].y;
+                } else {
+                    this.returnX += this.speedX;
+                    this.returnY += this.speedY;
+
+                    if (this.returnX < 0 || this.returnX > width) this.speedX *= -1;
+                    if (this.returnY < 0 || this.returnY > height) this.speedY *= -1;
+                    
+                    mainTargetX = this.returnX;
+                    mainTargetY = this.returnY;
+                }
+
+                // افکت فرار فوق‌العاده روان و بدون لگ هنگام لمس صفحه
+                if (mouse.active) {
+                    const dx = this.x - mouse.x;
+                    const dy = this.y - mouse.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < mouse.radius) {
+                        const force = (mouse.radius - distance) / mouse.radius;
+                        this.x += (dx / (distance || 1)) * force * 12;
+                        this.y += (dy / (distance || 1)) * force * 12;
+                        this.size = this.baseSize + (force * 2);
+                        this.escapeTimer = 240; // بازگشت ۴ ثانیه‌ای بعد از رها کردن دست
+                    }
+                }
+
+                if (this.escapeTimer > 0) {
+                    this.escapeTimer--;
+                    this.x += (mainTargetX - this.x) * 0.03;
+                    this.y += (mainTargetY - this.y) * 0.03;
+                    if (this.size > this.baseSize) this.size -= 0.04;
+                } else {
+                    // حرکت نرم به سمت هدف
+                    this.x += (mainTargetX - this.x) * 0.06;
+                    this.y += (mainTargetY - this.y) * 0.06;
+                    this.size = this.baseSize;
+                }
+
+                if (isTimeFor11 && this.opacity < 0.8) {
+                    this.opacity += 0.01;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                ctx.font = `900 ${this.size}px 'Poppins', sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('11', this.x, this.y);
+            }
+        }
+
+        for (let i = 0; i < particleCount; i++) {
+            particles.push(new Particle(i));
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            globalFrameCount++;
+
+            // ثانیه ۳ (فریم ۱۸۰): پخش موزیک دقیقاً برای ۱ بار بدون تکرار مجدد
+            if (globalFrameCount >= 180 && !isMusicStarted) {
+                isMusicStarted = true;
+                bgMusic.play().catch(e => console.log("منتظر تعامل اولیه جهت فعال‌سازی صدا..."));
+            }
+
+            // ثانیه ۴ (فریم ۲۴۰): جمع شدن کهکشانی ذرات روی عدد ۱۱ اصلی با فونت زیبا
+            if (!isTimeFor11 && globalFrameCount >= 240) {
+                isTimeFor11 = true;
+                center11.classList.add('complete');
+            }
+            
+            // اجرای روان حرکات تمام ذرات بدون خطوط لگ‌آور
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // فعال‌سازی و قفل‌گشایی صدای مرورگر با اولین لمس کوچک کاربر روی صفحه
+        const unlockAudio = () => {
+            bgMusic.play().then(() => {
+                if (!isMusicStarted) {
+                    bgMusic.pause();
+                    bgMusic.currentTime = 0;
+                }
+            }).catch(e => console.log(e));
+            window.removeEventListener('touchstart', unlockAudio);
+            window.removeEventListener('mousedown', unlockAudio);
+        };
+        window.addEventListener('touchstart', unlockAudio);
+        window.addEventListener('mousedown', unlockAudio);
+
+        const startAction = (e) => {
+            mouse.active = true;
+            const point = e.touches ? e.touches[0] : e;
+            mouse.x = point.clientX;
+            mouse.y = point.clientY;
+        };
+
+        const moveAction = (e) => {
+            if (!mouse.active) return;
+            const point = e.touches ? e.touches[0] : e;
+            mouse.x = point.clientX;
+            mouse.y = point.clientY;
+        };
+
+        const endAction = () => {
+            mouse.active = false;
+        };
+
+        window.addEventListener('mousedown', startAction);
+        window.addEventListener('mousemove', moveAction, { passive: true });
+        window.addEventListener('mouseup', endAction);
+
+        window.addEventListener('touchstart', startAction);
+        window.addEventListener('touchmove', moveAction, { passive: true });
+        window.addEventListener('touchend', endAction);
+
+        animate();
+    </script>
+</body>
+</html>
