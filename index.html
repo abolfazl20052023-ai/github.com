@@ -74,7 +74,7 @@
             generateFacePattern();
         });
 
-        const mouse = { x: null, y: null, active: false, radius: 150 };
+        const mouse = { x: null, y: null, active: false, radius: 140 };
         const particleCount = 450; 
         const particles = [];
         
@@ -132,8 +132,6 @@
                 this.index = index;
                 this.x = Math.random() * width;
                 this.y = Math.random() * height;
-                
-                // ذخیره موقعیت قبل از فرار برای بازگشت دقیق
                 this.returnX = this.x;
                 this.returnY = this.y;
 
@@ -142,16 +140,15 @@
                 this.speedX = (Math.random() - 0.5) * 0.5;
                 this.speedY = (Math.random() - 0.5) * 0.5;
                 this.opacity = Math.random() * 0.4 + 0.2;
-                this.escapeTimer = 0; // تایمر برای کنترل زمان بازگشت ۴ ثانیه‌ای
+                this.escapeTimer = 0; 
             }
 
             update() {
-                // تغییر زمان به ۷ ثانیه (۷۰۰۰ میلی‌ثانیه)
+                // فعال شدن ساختار صورت دقیقاً بعد از ۷ ثانیه
                 if (!isTimeForFace && Date.now() - startTime > 7000) {
                     isTimeForFace = true;
                 }
 
-                // تعیین موقعیت اصلی که ذره باید در آن قرار بگیرد
                 let mainTargetX, mainTargetY;
                 if (isTimeForFace && faceTargets[this.index]) {
                     mainTargetX = faceTargets[this.index].x;
@@ -167,37 +164,33 @@
                     mainTargetY = this.returnY;
                 }
 
-                // بررسی تعامل لمس و افکت فرار کردن اعداد
+                // سیستم فرار ذرات هنگام لمس
                 if (mouse.active) {
                     const dx = this.x - mouse.x;
                     const dy = this.y - mouse.y;
                     const distance = Math.sqrt(dx * dx + dy * dy);
 
                     if (distance < mouse.radius) {
-                        // ایجاد نیروی فرار به سمت بیرون از موقعیت انگشت
                         const force = (mouse.radius - distance) / mouse.radius;
-                        this.x += (dx / (distance || 1)) * force * 12;
-                        this.y += (dy / (distance || 1)) * force * 12;
-                        this.size = this.baseSize + (force * 5);
-                        this.escapeTimer = 240; // تنظیم فریم‌ها برای بازگشت ۴ ثانیه‌ای (۶۰ فریم در ثانیه * ۴ = ۲۴۰)
+                        this.x += (dx / (distance || 1)) * force * 14;
+                        this.y += (dy / (distance || 1)) * force * 14;
+                        this.size = this.baseSize + (force * 4);
+                        this.escapeTimer = 240; // فریم ریت کنترل بازگشت ۴ ثانیه‌ای
                     }
                 }
 
-                // بازگشت نرم به حالت اول دقیقاً در عرض ۴ ثانیه بعد از رها کردن لمس
+                // بازگشت به موقعیت اصلی دقیقاً در عرض ۴ ثانیه
                 if (this.escapeTimer > 0) {
                     this.escapeTimer--;
-                    // سرعت بازگشت ملایم (دقیقاً ۴ ثانیه طول می‌کشد تا کاملاً سر جایش بنشیند)
                     this.x += (mainTargetX - this.x) * 0.025;
                     this.y += (mainTargetY - this.y) * 0.025;
                     if (this.size > this.baseSize) this.size -= 0.05;
                 } else {
-                    // حرکت یا استقرار عادی
-                    this.x += (mainTargetX - this.x) * 0.05;
-                    this.y += (mainTargetY - this.y) * 0.05;
+                    this.x += (mainTargetX - this.x) * 0.06;
+                    this.y += (mainTargetY - this.y) * 0.06;
                     this.size = this.baseSize;
                 }
 
-                // تنظیم شفافیت متناسب با وضعیت چهره
                 if (isTimeForFace) {
                     if (this.opacity < 0.7) this.opacity += 0.02;
                 }
