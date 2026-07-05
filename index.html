@@ -151,6 +151,26 @@
 
         let connectionCount = 0;
         let isMusicPlaying = false;
+        let hasInteracted = false;
+
+        // تابع شروع تایمر ۳ ثانیه‌ای برای پخش موزیک
+        function startMusicTimer() {
+            if (!hasInteracted) {
+                hasInteracted = true;
+                
+                // افکت پررنگ شدن عدد ۱۱ وسط بعد از ۳ ثانیه همزمان با پخش آهنگ
+                setTimeout(() => {
+                    if (!isMusicPlaying) {
+                        bgMusic.play()
+                            .then(() => {
+                                isMusicPlaying = true;
+                                center11.classList.add('complete'); // روشن شدن عدد ۱۱ همزمان با موزیک
+                            })
+                            .catch(e => console.log("خطای پخش:", e));
+                    }
+                }, 3000); // ۳۰۰۰ میلی‌ثانیه یعنی ۳ ثانیه
+            }
+        }
 
         function checkCompletion() {
             if (mouse.active) {
@@ -164,17 +184,16 @@
                     connectionCount += 1.5;
                     if (connectionCount > 100) {
                         connectionCount = 100;
-                        center11.classList.add('complete');
-                        
-                        if (!isMusicPlaying) {
-                            bgMusic.play().catch(e => console.log("خطای پخش خودکار:", e));
-                            isMusicPlaying = true;
+                        if (!isMusicPlaying && !hasInteracted) {
+                            // اگر کاربر خودش سریع رفت روی ۱۱، آهنگ فوری پخش شود
+                            center11.classList.add('complete');
+                            bgMusic.play().then(() => { isMusicPlaying = true; }).catch(e => console.log(e));
                         }
                     }
                 }
             } else {
                 if (connectionCount > 0) connectionCount -= 1;
-                if (connectionCount < 100) {
+                if (connectionCount < 100 && !isMusicPlaying) {
                     center11.classList.remove('complete');
                 }
             }
@@ -193,47 +212,5 @@
                     const dist = Math.sqrt(dx * dx + dy * dy);
 
                     if (dist < 45) { 
-                        ctx.strokeStyle = `rgba(255, 255, 255, ${(1 - dist/45) * 0.12})`;
-                        ctx.lineWidth = 0.5;
-                        ctx.beginPath();
-                        ctx.moveTo(particles[i].x, particles[i].y);
-                        ctx.lineTo(particles[j].x, particles[j].y);
-                        ctx.stroke();
-                    }
-                }
-            }
-
-            checkCompletion();
-            requestAnimationFrame(animate);
-        }
-
-        const startAction = (e) => {
-            mouse.active = true;
-            const point = e.touches ? e.touches[0] : e;
-            mouse.x = point.clientX;
-            mouse.y = point.clientY;
-        };
-
-        const moveAction = (e) => {
-            if (!mouse.active) return;
-            const point = e.touches ? e.touches[0] : e;
-            mouse.x = point.clientX;
-            mouse.y = point.clientY;
-        };
-
-        const endAction = () => {
-            mouse.active = false;
-        };
-
-        window.addEventListener('mousedown', startAction);
-        window.addEventListener('mousemove', moveAction);
-        window.addEventListener('mouseup', endAction);
-
-        window.addEventListener('touchstart', startAction);
-        window.addEventListener('touchmove', moveAction);
-        window.addEventListener('touchend', endAction);
-
-        animate();
-    </script>
-</body>
-</html>
+                        ctx
+        
